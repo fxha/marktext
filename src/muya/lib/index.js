@@ -8,6 +8,7 @@ import { wordCount } from './utils'
 import ExportMarkdown from './utils/exportMarkdown'
 import ExportHtml from './utils/exportHtml'
 import ToolTip from './ui/tooltip'
+import selection from './selection'
 import './assets/styles/index.css'
 
 class Muya {
@@ -45,7 +46,18 @@ class Muya {
     eventCenter.attachDOMEvent(container, 'contextmenu', event => {
       event.preventDefault()
       event.stopPropagation()
-      const sectionChanges = this.contentState.selectionChange(this.contentState.cursor)
+
+      // Hide format box
+      this.eventCenter.dispatch('muya-format-picker', { reference: null })
+
+      // NOTE: When right clicking Chromium selects the underlying word if misspelled.
+
+      // Commit native cursor position
+      const cursor = selection.getCursorRange()
+      this.contentState.cursor = cursor
+
+      // Use the native cursor
+      const sectionChanges = this.contentState.selectionChange(null)
       eventCenter.dispatch('contextmenu', event, sectionChanges)
     })
     contentState.listenForPathChange()
@@ -262,6 +274,64 @@ class Muya {
     this.imagePathPicker.destroy()
     this.eventCenter.detachAllDomEvents()
   }
+
+  /**
+   * Replace the word range with the given replacement.
+   * 
+   * NOTE: It's very likely that this method can have side effects because of none existing synchronization.
+   * 
+   * @param {*} line Line block reference - must be a valid reference!
+   * @param {*} wordCursor Replace this range with the replacement
+   * @param {*} replacement Replacement
+   * @param {*} setCursor Shoud we update the cursor
+   */
+  _replaceWordInline (line, wordCursor, replacement, setCursor=false) {
+    // TODO(spell): Move this to utils
+    const cursorToString = c => {
+      // Create shallow copy
+      const start = Object.assign({}, c.start)
+      const end = Object.assign({}, c.start)
+
+      // TODO(spell): Print only `start`, `end` and text length
+      // start.block = end.block = null
+
+      return JSON.stringify({ start, end })
+    }
+
+    if (wordCursor.start.key !== wordCursor.end.key) {
+      throw new Error('Expects a single line word cursor: start.key != end.key.')
+    } else if (line.start.key !== line.end.key) {
+      // TODO(spell): Not necessary, change `end` to `start`?
+      // line.end = line.start
+      throw new Error('Expects a single line cursor: start.key != end.key.')
+    } else if (wordCursor.start.offset > wordCursor.end.offset) {
+      throw new Error(`Invalid cursor:\n\n${cursorToString(wordCursor)}\n`)
+    } else if (line.start.key !== wordCursor.end.key) {
+      throw new Error(`Cursor mismatch:\n\n${cursorToString(line)}\n\n${cursorToString(wordCursor)}\n`)
+    } else if (line.start.block.text.length < wordCursor.end.offset) {
+      throw new Error(`Invalid cursor:\n\n${cursorToString(line)}\n\n${cursorToString(wordCursor)}\n`)
+    }
+
+    // Replace word
+    const { block } = line.start
+    const { offset: left } = wordCursor.start
+    const { offset: right } = wordCursor.end
+
+    block.text = block.text.substr(0, left) + replacement + block.text.substr(right)
+
+    // Update cursor
+    if (setCursor) {
+      const cursor = Object.assign({}, wordCursor.start, {
+        offset: left + replacement.length
+      })
+      this.contentState.cursor.start = cursor
+      this.contentState.cursor.end = cursor
+      line.start = cursor
+      line.end = cursor
+    }
+    this.contentState.partialRender()
+    this.dispatchChange()
+  }
 }
 
 /**
@@ -281,10 +351,13 @@ function getContainer (originContainer, options) {
     container.classList.add('ag-show-quick-insert-hint')
   }
 
+  // TODO(spell): Disable spellchecking on elements like code blocks etc
+
   container.setAttribute('contenteditable', true)
   container.setAttribute('autocorrect', false)
   container.setAttribute('autocomplete', 'off')
-  container.setAttribute('spellcheck', false)
+  // TODO(spell): Allow disabling spellchecking
+  container.setAttribute('spellcheck', true)
   container.appendChild(rootDom)
   originContainer.replaceWith(container)
   return container

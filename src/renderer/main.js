@@ -1,3 +1,4 @@
+import './init'
 import Vue from 'vue'
 import axios from 'axios'
 import { ipcRenderer } from 'electron'
@@ -12,6 +13,8 @@ import services from './services'
 import './assets/styles/index.css'
 import './assets/styles/printService.css'
 
+// // // // // // // // // // // // //
+// Decode source map in production - must be registered first
 import sourceMapSupport from 'source-map-support'
 sourceMapSupport.install({
   environment: 'node',
@@ -19,6 +22,8 @@ sourceMapSupport.install({
   hookRequire: false
 })
 
+// // // // // // // // // // // // //
+// Register renderer error handler
 window.addEventListener('error', event => {
   const { message, name, stack } = event.error
   const copy = {
@@ -30,15 +35,10 @@ window.addEventListener('error', event => {
   ipcRenderer.send('AGANI::handle-renderer-error', copy)
 })
 
-// import notice from './services/notification'
-// In the renderer process:
-// var webFrame = require('electron').webFrame
-// var SpellCheckProvider = require('electron-spell-check-provider')
+// TODO: Register crashReporter on macOS
 
-// webFrame.setSpellCheckProvider('en-US', true, new SpellCheckProvider('en-US').on('misspelling', function (suggestions) {
-//   console.log(suggestions)
-// }))
-
+// // // // // // // // // // // // //
+// Configure Vue
 locale.use(lang)
 
 Vue.use(Dialog)

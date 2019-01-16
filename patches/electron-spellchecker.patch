@@ -1,0 +1,59 @@
+diff --git a/package.json b/package.json
+index c0d78cf..d27151d 100644
+--- a/package.json
++++ b/package.json
+@@ -32,15 +32,15 @@
+     "@paulcbetts/cld": "^2.4.6",
+     "@paulcbetts/spellchecker": "^4.0.6",
+     "bcp47": "^1.1.2",
+-    "debug": "^2.6.3",
+-    "electron-remote": "^1.1.1",
+-    "keyboard-layout": "^2.0.7",
+-    "lru-cache": "^4.0.2",
++    "debug": "^4.1.1",
++    "electron-remote": "^1.3.0",
++    "keyboard-layout": "^2.0.14",
++    "lru-cache": "^5.1.1",
+     "mkdirp": "^0.5.1",
+-    "pify": "^2.3.0",
+-    "rxjs": "^5.0.1",
++    "pify": "^4.0.1",
++    "rxjs": "^5.5.11",
+     "rxjs-serial-subscription": "^0.1.1",
+-    "spawn-rx": "^2.0.7"
++    "spawn-rx": "^v2.0.12"
+   },
+   "devDependencies": {
+     "@kwonoj/rxjs-testscheduler-compat": "0.0.4",
+diff --git a/src/spell-check-handler.js b/src/spell-check-handler.js
+index 8b6cc53..ea52bb4 100644
+--- a/src/spell-check-handler.js
++++ b/src/spell-check-handler.js
+@@ -12,6 +12,7 @@ import 'rxjs/add/observable/empty';
+ import 'rxjs/add/observable/fromEvent';
+ import 'rxjs/add/observable/fromPromise';
+ import 'rxjs/add/observable/of';
++import 'rxjs/add/observable/merge';
+ 
+ import 'rxjs/add/operator/catch';
+ import 'rxjs/add/operator/concat';
+@@ -19,7 +20,6 @@ import 'rxjs/add/operator/concatMap';
+ import 'rxjs/add/operator/do';
+ import 'rxjs/add/operator/filter';
+ import 'rxjs/add/operator/mergeMap';
+-import 'rxjs/add/operator/merge';
+ import 'rxjs/add/operator/observeOn';
+ import 'rxjs/add/operator/reduce';
+ import 'rxjs/add/operator/startWith';
+@@ -588,9 +588,9 @@ export default class SpellCheckHandler {
+ 
+     if (process.platform === 'linux') {
+       let locales = await spawn('locale', ['-a'])
+-        .catch(() => Observable.of(null))
+         .reduce((acc,x) => { acc.push(...x.split('\n')); return acc; }, [])
+-        .toPromise();
++        .toPromise()
++        .catch(() => []);
+ 
+       d(`Raw Locale list: ${JSON.stringify(locales)}`);
+ 

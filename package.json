@@ -28,7 +28,7 @@
     "postinstall": "npm run rebuild && npm run lint:fix",
     "build:muya": "cd src/muya && webpack --progress --colors --config webpack.config.js",
     "release:muya": "npm run build:muya && cd src/muya && npm publish",
-    "rebuild": "electron-rebuild -f -w keyboard-layout -o keyboard-layout"
+    "rebuild": "electron-rebuild -f -w @paulcbetts/cld,@paulcbetts/spellchecker,keyboard-layout -o @paulcbetts/cld,@paulcbetts/spellchecker,keyboard-layout"
   },
   "build": {
     "productName": "Mark Text",
@@ -139,6 +139,7 @@
     "diacritics-map": "^0.1.0",
     "dompurify": "^1.0.8",
     "electron-is-accelerator": "^0.1.2",
+    "electron-spellchecker": "^1.1.2",
     "element-resize-detector": "^1.2.0",
     "element-ui": "^2.4.11",
     "file-icons-js": "^1.0.3",
