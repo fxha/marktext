@@ -502,10 +502,10 @@ const actions = {
 
   // Open a new tab, optionally with content.
   LISTEN_FOR_NEW_TAB ({ dispatch }) {
-    ipcRenderer.on('AGANI::new-tab', (e, markdownDocument, selected=true) => {
+    ipcRenderer.on('mt::open-new-tab', (e, markdownDocument, options={}, selected=true) => {
       if (markdownDocument) {
         // Create tab with content.
-        dispatch('NEW_TAB_WITH_CONTENT', { markdownDocument, selected })
+        dispatch('NEW_TAB_WITH_CONTENT', { markdownDocument, options, selected })
       } else {
         // Fallback: create a blank tab and always select it
         dispatch('NEW_UNTITLED_TAB', {})
@@ -568,7 +568,8 @@ const actions = {
    * @param {{markdownDocument: IMarkdownDocumentRaw, selected?: boolean}} obj The markdown document
    * and optional whether the tab should become the selected tab (true if not set).
    */
-  NEW_TAB_WITH_CONTENT ({ commit, state, dispatch }, { markdownDocument, selected }) {
+  NEW_TAB_WITH_CONTENT ({ commit, state, dispatch }, { markdownDocument, options, selected }) {
+    if (!options) options = {}
     if (!markdownDocument) {
       console.warn('Cannot create a file tab without a markdown document!')
       dispatch('NEW_UNTITLED_TAB', {})
@@ -607,6 +608,11 @@ const actions = {
     const docState = createDocumentState(markdownDocument)
     const { id } = docState
 
+    // if (options.range) {
+    //   const { start, end } = options.range
+    //   // TODO(search): Set cursor from options (line and offset). Currently muya has no support for doing so.
+    // }
+
     if (selected) {
       dispatch('UPDATE_CURRENT_FILE', docState)
       bus.$emit('file-loaded', { id, markdown })
@@ -615,7 +621,7 @@ const actions = {
     }
 
     if (isMixedLineEndings) {
-      // TODO: Show (this) notification(s) per tab.
+      // TODO(watcher): Show (this) notification(s) per tab.
       const { filename, lineEnding } = markdownDocument
       notice.notify({
         title: 'Line Ending',
@@ -639,7 +645,6 @@ const actions = {
   // WORKAROUND: id is "muya" if changes come from muya and not source code editor! So we don't have to apply the workaround.
   LISTEN_FOR_CONTENT_CHANGE ({ commit, state, rootState }, { id, markdown, wordCount, cursor, history, toc }) {
     const { autoSave } = rootState.preferences
-    const { projectTree } = rootState.project
     const { id: currentId, pathname, markdown: oldMarkdown } = state.currentFile
 
     if (!id) {
@@ -682,9 +687,6 @@ const actions = {
 
     // change save status/save to file only when the markdown changed!
     if (markdown !== oldMarkdown) {
-      if (projectTree) {
-        commit('UPDATE_PROJECT_CONTENT', { markdown, pathname })
-      }
       if (pathname && autoSave) {
         ipcRenderer.send('AGANI::response-file-save', { id: currentId, pathname, markdown, options })
       } else {
