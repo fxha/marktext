@@ -502,7 +502,7 @@ const actions = {
 
   // Open a new tab, optionally with content.
   LISTEN_FOR_NEW_TAB ({ dispatch }) {
-    ipcRenderer.on('mt::open-new-tab', (e, markdownDocument, options={}, selected=true) => {
+    ipcRenderer.on('mt::open-new-tab', (e, markdownDocument, options = {}, selected = true) => {
       if (markdownDocument) {
         // Create tab with content.
         dispatch('NEW_TAB_WITH_CONTENT', { markdownDocument, options, selected })
@@ -512,7 +512,7 @@ const actions = {
       }
     })
 
-    ipcRenderer.on('mt::new-untitled-tab', (e, selected=true, markdown='', ) => {
+    ipcRenderer.on('mt::new-untitled-tab', (e, selected = true, markdown = '', ) => {
       // Create a blank tab
       dispatch('NEW_UNTITLED_TAB', { markdown, selected })
     })
@@ -568,8 +568,7 @@ const actions = {
    * @param {{markdownDocument: IMarkdownDocumentRaw, selected?: boolean}} obj The markdown document
    * and optional whether the tab should become the selected tab (true if not set).
    */
-  NEW_TAB_WITH_CONTENT ({ commit, state, dispatch }, { markdownDocument, options, selected }) {
-    if (!options) options = {}
+  NEW_TAB_WITH_CONTENT ({ commit, state, dispatch }, { markdownDocument, options = {}, selected }) {
     if (!markdownDocument) {
       console.warn('Cannot create a file tab without a markdown document!')
       dispatch('NEW_UNTITLED_TAB', {})
@@ -577,10 +576,9 @@ const actions = {
     }
 
     // Select the tab if not value is specified.
-    if (selected == null) {
+    if (typeof selected === 'undefined') {
       selected = true
     }
-
     // Check if tab already exist and always select existing tab if so.
     const { currentFile, tabs } = state
     const { pathname } = markdownDocument
@@ -605,17 +603,12 @@ const actions = {
     }
 
     const { markdown, isMixedLineEndings } = markdownDocument
-    const docState = createDocumentState(markdownDocument)
-    const { id } = docState
-
-    // if (options.range) {
-    //   const { start, end } = options.range
-    //   // TODO(search): Set cursor from options (line and offset). Currently muya has no support for doing so.
-    // }
+    const docState = createDocumentState(Object.assign(markdownDocument, options))
+    const { id, cursor } = docState
 
     if (selected) {
       dispatch('UPDATE_CURRENT_FILE', docState)
-      bus.$emit('file-loaded', { id, markdown })
+      bus.$emit('file-loaded', { id, markdown, cursor })
     } else {
       commit('ADD_FILE_TO_TABS', docState)
     }
@@ -646,7 +639,6 @@ const actions = {
   LISTEN_FOR_CONTENT_CHANGE ({ commit, state, rootState }, { id, markdown, wordCount, cursor, history, toc }) {
     const { autoSave } = rootState.preferences
     const { id: currentId, pathname, markdown: oldMarkdown } = state.currentFile
-
     if (!id) {
       throw new Error(`Listen for document change but id was not set!`)
     } else if (!currentId || state.tabs.length === 0) {
